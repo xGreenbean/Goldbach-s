@@ -3,9 +3,9 @@ import tensorflow as tf
 import numpy as np
 from PrepData import *
 
-BUS_WIDTH = 24
+BUS_WIDTH = 16
 #data handeling
-XY = np.loadtxt('Bigdataset.txt',dtype = 'int')
+XY = np.loadtxt('sdataset.txt',dtype = 'int')
 np.random.shuffle(XY)
 f = XY[:, 0]
 l = XY[:, 1]
@@ -22,18 +22,19 @@ train_x = f[rnd_indices]
 train_y = l[rnd_indices]
 test_x = f[~rnd_indices]
 test_y = l[~rnd_indices]
-fet = f = XY[:, 0]
+fet = XY[:, 0]
 fet = fet[~rnd_indices]
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 400
+training_epochs = 300
 batch_size = 128
-display_step = 1
+display_step = 30
 
 # Network Parameters
-n_hidden_1 = 8 # 1st layer number of features
-n_hidden_2 = 4 # 2nd layer number of features
+n_hidden_1 = 16 # 1st layer number of features
+n_hidden_2 = 8 # 2nd layer number of features
+n_hidden_3 = 16
 n_input = n_dim # MNIST data input (img shape: 28*28)
 
 # tf Graph input
@@ -49,19 +50,24 @@ def multilayer_perceptron(x, weights, biases):
     # Hidden layer with RELU activation
     layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
     layer_2 = tf.nn.relu(layer_2)
+    # Hidden layer with RELU activation
+    layer_3 = tf.add(tf.matmul(layer_2, weights['h3']), biases['b3'])
+    layer_3 = tf.nn.relu(layer_3)
     # Output layer with linear activation
-    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+    out_layer = tf.matmul(layer_3, weights['out']) + biases['out']
     return out_layer
 
 # Store layers weight & bias
 weights = {
     'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
     'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([n_hidden_2, 1]))
+    'h3': tf.Variable(tf.random_normal([n_hidden_2, n_hidden_3])),
+    'out': tf.Variable(tf.random_normal([n_hidden_3, 1]))
 }
 biases = {
     'b1': tf.Variable(tf.random_normal([n_hidden_1])),
     'b2': tf.Variable(tf.random_normal([n_hidden_2])),
+    'b3':tf.Variable(tf.random_normal([n_hidden_3])),
     'out': tf.Variable(tf.random_normal([1]))
 }
 
@@ -69,7 +75,10 @@ biases = {
 pred = multilayer_perceptron(x, weights, biases)
 
 # Define loss and optimizer
+#  regularizers = tf.nn.l2_loss(weights['h1']) + tf.nn.l2_loss(weights['h2']) + tf.nn.l2_loss(weights['h3'])+ tf.nn.l2_loss(weights['out'])
+#  cost = tf.reduce_mean(tf.add(tf.square(pred - y),regularizers))
 cost = tf.reduce_mean(tf.square(pred - y))
+
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Initializing the variables
@@ -91,7 +100,7 @@ with tf.Session() as sess:
             # Compute average loss
         # Display logs per epoch step
         if epoch % display_step == 0:
-            c = sess.run(cost, feed_dict={x: test_x, y: test_y})
+            c = sess.run(cost, feed_dict={x: train_x, y: train_y})
             print("Epoch:", '%04d' % (epoch+1), "cost=", \
                 "{:.9f}".format(c))
 
