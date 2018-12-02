@@ -3,9 +3,9 @@ import tensorflow as tf
 import numpy as np
 from PrepData import *
 
-BUS_WIDTH = 16
+BUS_WIDTH = 24
 #data handeling
-XY = np.loadtxt('sdataset.txt',dtype = 'int')
+XY = np.loadtxt('Bigdataset.txt',dtype = 'int')
 np.random.shuffle(XY)
 f = XY[:, 0]
 l = XY[:, 1]
@@ -27,7 +27,7 @@ fet = fet[~rnd_indices]
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 1000
+training_epochs = 400
 batch_size = 128
 display_step = 1
 
@@ -81,7 +81,6 @@ with tf.Session() as sess:
 
     # Training cycle
     for epoch in range(training_epochs):
-        avg_cost = 0.
         for batch in range(0, len(train_y) // batch_size):
             offset = (epoch * batch_size) % (train_x.shape[0] - batch_size)
             batch_data = train_x[offset:(offset + batch_size), :]
