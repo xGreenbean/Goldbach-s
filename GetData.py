@@ -3,7 +3,7 @@ import smtplib
 
 from sklearn.preprocessing import OneHotEncoder
 def loadfile():
-    mymatrix = np.loadtxt('/home/ehud/PycharmProjects/Goldbach/primes1.txt')
+    mymatrix = np.loadtxt('/home/ehud/PycharmProjects/Goldbach/Datasets/primes1.txt')
     mymatrix = mymatrix.astype(int)
     return mymatrix.ravel().tolist()
 def find_Ppairs(prime_list):
@@ -18,7 +18,7 @@ def find_Ppairs(prime_list):
         if div[1] == 0:
             mat = np.matrix(dataset)
             print("%d" %div[0])
-            with open(r'C:\Users\Student\PycharmProjects\GB\dataset.txt', 'a+') as f:
+            with open(r'Datasets/dataset.txt', 'a+') as f:
                 np.savetxt(f, mat, fmt='%i')
             dataset = []
         for p in prime_list:
@@ -30,7 +30,7 @@ def find_Ppairs(prime_list):
         dataset.append([num ,pairs_counter])
         pairs_counter = 0
     mat = np.matrix(dataset)
-    with open(r'C:\Users\Student\PycharmProjects\GB\dataset.txt', 'a+') as f:
+    with open(r'Datasets/dataset.txt', 'a+') as f:
         np.savetxt(f, mat, fmt='%i')
 
 def get_mod3_mod5_mod7(arr):

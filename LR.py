@@ -10,7 +10,7 @@ training_epochs = 1000
 beta = 0.005
 batch_size = 2048
 
-XY = np.loadtxt('sdataset.txt',dtype = 'int')
+XY = np.loadtxt('Datasets/sdataset.txt',dtype = 'int')
 np.random.shuffle(XY)
 f = XY[:, 0]
 l = XY[:, 1]

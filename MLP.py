@@ -5,7 +5,7 @@ from PrepData import *
 
 BUS_WIDTH = 16
 #data handeling
-XY = np.loadtxt('sdataset.txt',dtype = 'int')
+XY = np.loadtxt('Datasets/sdataset.txt',dtype = 'int')
 np.random.shuffle(XY)
 f = XY[:, 0]
 l = XY[:, 1]
