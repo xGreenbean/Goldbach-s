@@ -5,55 +5,59 @@ import sklearn.preprocessing as sk
 from PrepData import *
 # Writer Thushan Ganegedara ,
 # used ( with little modifications) the code from his tuto.
-#forked from https://github.com/thushv89/datacamp_tutorials
-epochs = 50
-best_prediction_epoch = 49  # replace this with the epoch that you got the best results when running the plotting code
 
 #data handeling
-XY = np.loadtxt('Datasets/tdataset.txt',dtype = 'float32')
+BUS_WIDTH = 16
+XY = np.loadtxt('Datasets/tdataset.txt',dtype = 'int')
 TEST_DATA_SIZE = 11000
 START_PRED = 11000
 END_PRED = 12500
 labels = XY[:, 1]
 features = XY[:, 0]
 
+mods = get_mod3_mod5_mod7(features)
+features = vec_bin_array(features, BUS_WIDTH)
+features = np.c_[features,mods]
+features, labels = append_bias_reshape(features,labels)
+n_dim = features.shape[1]
 
 train_data = labels[:TEST_DATA_SIZE]
 test_data = labels[TEST_DATA_SIZE:]
 
-scaler = sk.MinMaxScaler()
-train_data = train_data.reshape(-1,1)
-test_data = test_data.reshape(-1,1)
-
-
-# Train the Scaler with training data and smooth data
-smoothing_window_size = 1000
-for di in range(0,len(train_data)-smoothing_window_size,smoothing_window_size):
-    scaler.fit(train_data[di:di+smoothing_window_size,:])
-    train_data[di:di+smoothing_window_size,:] = scaler.transform(train_data[di:di+smoothing_window_size,:])
-
-# You normalize the last bit of remaining data
-scaler.fit(train_data[di+smoothing_window_size:,:])
-train_data[di+smoothing_window_size:,:] = scaler.transform(train_data[di+smoothing_window_size:,:])
-
-# Reshape both train and test data
-train_data = train_data.reshape(-1)
-# Normalize test data
-test_data = scaler.transform(test_data).reshape(-1)
-
-# Now perform exponential moving average smoothing
-# So the data will have a smoother curve than the original ragged data
-EMA = 0.0
-gamma = 0.1
-for ti in range(len(train_data)):
-  EMA = gamma*train_data[ti] + (1-gamma)*EMA
-  train_data[ti] = EMA
-# Used for visualization and test purposes
-all_mid_data = np.concatenate([train_data,test_data],axis=0)
+# scaler = sk.MinMaxScaler()
+# train_data = train_data.reshape(-1,1)
+# test_data = test_data.reshape(-1,1)
+#
+#
+# # Train the Scaler with training data and smooth data
+# smoothing_window_size = 1000
+# for di in range(0,len(train_data)-smoothing_window_size,smoothing_window_size):
+#     scaler.fit(train_data[di:di+smoothing_window_size,:])
+#     train_data[di:di+smoothing_window_size,:] = scaler.transform(train_data[di:di+smoothing_window_size,:])
+#
+# # You normalize the last bit of remaining data
+# scaler.fit(train_data[di+smoothing_window_size:,:])
+# train_data[di+smoothing_window_size:,:] = scaler.transform(train_data[di+smoothing_window_size:,:])
+#
+# # Reshape both train and test data
+# train_data = train_data.reshape(-1)
+# # Normalize test data
+# test_data = scaler.transform(test_data).reshape(-1)
+#
+# # Now perform exponential moving average smoothing
+# # So the data will have a smoother curve than the original ragged data
+# EMA = 0.0
+# gamma = 0.1
+# for ti in range(len(train_data)):
+#   EMA = gamma*train_data[ti] + (1-gamma)*EMA
+#   train_data[ti] = EMA
+# # Used for visualization and test purposes
+# all_mid_data = np.concatenate([train_data,test_data],axis=0)
 
 class DataGeneratorSeq(object):
 
-    def __init__(self, partitions, batch_size, num_unroll):
+    def __init__(self, partitions,features, batch_size, num_unroll):
+        self._features = features
         self._partitions = partitions
         self._partitions_length = len(self._partitions) - num_unroll
         self._batch_size = batch_size
@@ -63,17 +67,17 @@ class DataGeneratorSeq(object):
 
     def next_batch(self):
 
-        batch_data = np.zeros((self._batch_size), dtype=np.float32)
+        batch_data = np.zeros((self._batch_size,n_dim), dtype=np.float32)
         batch_labels = np.zeros((self._batch_size), dtype=np.float32)
 
         for b in range(self._batch_size):
             if self._cursor[b] + 1 >= self._partitions_length:
                 # self._cursor[b] = b * self._segments
                 self._cursor[b] = np.random.randint(0, (b + 1) * self._segments)
-
-            batch_data[b] = self._partitions[self._cursor[b]]
-            self._cursor[b] = (self._cursor[b] + 1) % self._partitions_length
+            batch_data[b] = self._features[self._cursor[b]]
             batch_labels[b] = self._partitions[self._cursor[b]]
+            self._cursor[b] = (self._cursor[b] + 1) % self._partitions_length
+
 
 
 
@@ -96,7 +100,7 @@ class DataGeneratorSeq(object):
             self._cursor[b] = np.random.randint(0, min((b + 1) * self._segments, self._partitions_length - 1))
 
 
-dg = DataGeneratorSeq(train_data, 5, 5)
+dg = DataGeneratorSeq(train_data,features, 5, 5)
 u_data, u_labels = dg.unroll_batches()
 
 for ui, (dat, lbl) in enumerate(zip(u_data, u_labels)):
@@ -106,7 +110,8 @@ for ui, (dat, lbl) in enumerate(zip(u_data, u_labels)):
     print('\tInputs: ', dat)
     print('\n\tOutput:', lbl)
 
-D = 1 # Dimensionality of the data. Since our data is 1-D this would be 1
+
+D = n_dim # Dimensionality of the data. Since our data is 1-D this would be 1
 num_unrollings = 50 # Number of time steps you look into the future.
 batch_size = 500 # Number of samples in a batch
 num_nodes = [200,200,150] # Number of hidden nodes in each layer of the deep LSTM stack we're using
@@ -138,7 +143,6 @@ multi_cell = tf.contrib.rnn.MultiRNNCell(lstm_cells)
 
 w = tf.get_variable('w',shape=[num_nodes[-1], 1], initializer=tf.contrib.layers.xavier_initializer())
 b = tf.get_variable('b',initializer=tf.random_uniform([1],-0.1,0.1))
-
 
 # Create cell state and hidden state variables to maintain the state of the LSTM
 c, h = [],[]
@@ -219,6 +223,7 @@ with tf.control_dependencies([tf.assign(sample_c[li],sample_state[li][0]) for li
 
 print('\tAll done')
 
+epochs = 30
 valid_summary = 1  # Interval you make test predictions
 
 n_predict_once = 50  # Number of steps you continously predict for
@@ -241,12 +246,12 @@ print('Initialized')
 average_loss = 0
 
 # Define data generator
-data_gen = DataGeneratorSeq(train_data, batch_size, num_unrollings)
+data_gen = DataGeneratorSeq(train_data,features, batch_size, num_unrollings)
 
 x_axis_seq = []
 
 # Points you start our test predictions from
-test_points_seq = np.arange(11000, 12000, 50).tolist()
+test_points_seq = np.arange(11000,12000,num_unrollings).tolist()
 
 for ep in range(epochs):
 
@@ -349,9 +354,11 @@ for ep in range(epochs):
         predictions_over_time.append(predictions_seq)
         print('\tFinished Predictions')
 
+best_prediction_epoch = 27  # replace this with the epoch that you got the best results when running the plotting code
+
 plt.figure(figsize=(18, 18))
 plt.subplot(2, 1, 1)
-plt.plot(range(len(all_mid_data)), all_mid_data, color='b')
+plt.plot(features, all_mid_data, color='b')
 
 # Plotting how the predictions change over time
 # Plot older predictions with low alpha and newer predictions with high alpha
@@ -362,19 +369,26 @@ for p_i, p in enumerate(predictions_over_time[::3]):
         plt.plot(xval, yval, color='r', alpha=alpha[p_i])
 
 plt.title('Evolution of Test Predictions Over Time', fontsize=18)
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Mid Price', fontsize=18)
-plt.xlim(11000, 12500)
+plt.xlabel('Number', fontsize=18)
+plt.ylabel('Partitions', fontsize=18)
+plt.xlim(11000,12500)
 
 plt.subplot(2, 1, 2)
 
 # Predicting the best test prediction you got
-plt.plot(range(len(all_mid_data)), all_mid_data, color='b')
+plt.plot(features, all_mid_data, color='b')
 for xval, yval in zip(x_axis_seq, predictions_over_time[best_prediction_epoch]):
     plt.plot(xval, yval, color='r')
 
 plt.title('Best Test Predictions Over Time', fontsize=18)
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Mid Price', fontsize=18)
-plt.xlim(11000, 12500)
+plt.xlabel('number', fontsize=18)
+plt.ylabel('partitions', fontsize=18)
+plt.xlim(11000,12500)
 plt.show()
+
+# plt.plot(features,labels)
+# plt.xlabel('x',fontsize=18)
+# plt.ylabel('G(x)',fontsize=18)
+# plt.show()
+
+
