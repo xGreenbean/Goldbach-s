@@ -6,16 +6,16 @@ from PrepData import *
 # Writer Thushan Ganegedara ,
 # used ( with little modifications) the code from his tuto.
 #forked from https://github.com/thushv89/datacamp_tutorials
-epochs = 50
-best_prediction_epoch = 49  # replace this with the epoch that you got the best results when running the plotting code
+epochs = 200
+best_prediction_epoch = 199  # replace this with the epoch that you got the best results when running the plotting code
 
 #data handeling
-XY = np.loadtxt('Datasets/tdataset.txt',dtype = 'float32')
+XY = np.loadtxt('Datasets/tdataset.txt', dtype = 'float32')
+
 TEST_DATA_SIZE = 11000
 START_PRED = 11000
 END_PRED = 12500
 labels = XY[:, 1]
-features = XY[:, 0]
 
 
 train_data = labels[:TEST_DATA_SIZE]
@@ -41,8 +41,8 @@ train_data = train_data.reshape(-1)
 # Normalize test data
 test_data = scaler.transform(test_data).reshape(-1)
 
-# Now perform exponential moving average smoothing
-# So the data will have a smoother curve than the original ragged data
+Now perform exponential moving average smoothing
+So the data will have a smoother curve than the original ragged data
 EMA = 0.0
 gamma = 0.1
 for ti in range(len(train_data)):
@@ -72,10 +72,9 @@ class DataGeneratorSeq(object):
                 self._cursor[b] = np.random.randint(0, (b + 1) * self._segments)
 
             batch_data[b] = self._partitions[self._cursor[b]]
+            batch_labels[b] = self._partitions[self._cursor[b] + np.random.randint(0, 5)]
+
             self._cursor[b] = (self._cursor[b] + 1) % self._partitions_length
-            batch_labels[b] = self._partitions[self._cursor[b]]
-
-
 
         return batch_data, batch_labels
 
@@ -109,7 +108,7 @@ for ui, (dat, lbl) in enumerate(zip(u_data, u_labels)):
 D = 1 # Dimensionality of the data. Since our data is 1-D this would be 1
 num_unrollings = 50 # Number of time steps you look into the future.
 batch_size = 500 # Number of samples in a batch
-num_nodes = [200,200,150] # Number of hidden nodes in each layer of the deep LSTM stack we're using
+num_nodes = [20,20,15] # Number of hidden nodes in each layer of the deep LSTM stack we're using
 n_layers = len(num_nodes) # number of layers
 dropout = 0.2 # dropout amount
 
@@ -246,7 +245,8 @@ data_gen = DataGeneratorSeq(train_data, batch_size, num_unrollings)
 x_axis_seq = []
 
 # Points you start our test predictions from
-test_points_seq = np.arange(11000, 12000, 50).tolist()
+test_points_seq = np.arange(START_PRED, END_PRED, 50).tolist()
+
 
 for ep in range(epochs):
 
@@ -263,7 +263,6 @@ for ep in range(epochs):
         feed_dict.update({tf_learning_rate: 0.0001, tf_min_learning_rate: 0.000001})
 
         _, l = session.run([optimizer, loss], feed_dict=feed_dict)
-
         average_loss += l
 
     # ============================ Validation ==============================
@@ -351,7 +350,7 @@ for ep in range(epochs):
 
 plt.figure(figsize=(18, 18))
 plt.subplot(2, 1, 1)
-plt.plot(range(len(all_mid_data)), all_mid_data, color='b')
+plt.scatter(range(len(all_mid_data)), all_mid_data, color='b', s=3)
 
 # Plotting how the predictions change over time
 # Plot older predictions with low alpha and newer predictions with high alpha
@@ -359,22 +358,21 @@ start_alpha = 0.25
 alpha = np.arange(start_alpha, 1.1, (1.0 - start_alpha) / len(predictions_over_time[::3]))
 for p_i, p in enumerate(predictions_over_time[::3]):
     for xval, yval in zip(x_axis_seq, p):
-        plt.plot(xval, yval, color='r', alpha=alpha[p_i])
+        plt.scatter(xval, yval, color='r', alpha=alpha[p_i], s=3)
 
 plt.title('Evolution of Test Predictions Over Time', fontsize=18)
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Mid Price', fontsize=18)
-plt.xlim(11000, 12500)
-
+plt.xlabel('x', fontsize=18)
+plt.ylabel('G(x)', fontsize=18)
+plt.xlim(START_PRED, END_PRED)
 plt.subplot(2, 1, 2)
 
 # Predicting the best test prediction you got
-plt.plot(range(len(all_mid_data)), all_mid_data, color='b')
+plt.scatter(range(len(all_mid_data)), all_mid_data, color='b', s=3)
 for xval, yval in zip(x_axis_seq, predictions_over_time[best_prediction_epoch]):
-    plt.plot(xval, yval, color='r')
+    plt.scatter(xval, yval, color='r', s=3)
 
 plt.title('Best Test Predictions Over Time', fontsize=18)
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Mid Price', fontsize=18)
-plt.xlim(11000, 12500)
+plt.xlabel('x', fontsize=18)
+plt.ylabel('G(x)', fontsize=18)
+plt.xlim(START_PRED, END_PRED)
 plt.show()

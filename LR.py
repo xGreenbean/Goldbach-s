@@ -7,7 +7,7 @@ BUS_WIDTH = 16;
 display_step = 100
 learning_rate = 0.01
 training_epochs = 1000
-beta = 0.005
+beta = 0.001
 batch_size = 2048
 
 XY = np.loadtxt('Datasets/sdataset.txt',dtype = 'int')
@@ -41,7 +41,7 @@ W = tf.get_variable(name="Weight", dtype=tf.float32, shape=[n_dim,1], initialize
 init = tf.global_variables_initializer()
 
 regularizer = tf.nn.l2_loss(W)
-y_ = tf.matmul(X, W)
+y_ = np.tf.matmul(X, W)
 cost = tf.reduce_mean(tf.square(y_ - Y) + beta * regularizer)
 # cost = tf.reduce_mean(tf.square(y_ - Y) )
 
@@ -79,7 +79,7 @@ with tf.Session() as sess:
     plt.show()
 
     fig, ax = plt.subplots()
-    ax.scatter(fet, pred_y, s=5)
+    ax.scatter(fet, np.pred_y, s=5)
     ax.set_xlabel('X')
     ax.set_ylabel('G(X)')
     plt.show()

@@ -27,7 +27,7 @@ fet = fet[~rnd_indices]
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 300
+training_epochs = 400
 batch_size = 128
 display_step = 30
 
